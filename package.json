@@ -1,15 +1,26 @@
 {
   "name": "github-version-tracker",
-  "version": "1.0.0",
-  "main": "index.js",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "test": "jest",
+    "prepare": "npm run build"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "github",
+    "version",
+    "tracking",
+    "package.json"
+  ],
+  "author": "Raymond Ngobeni",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
   "type": "commonjs",
-  "description": "",
+  "description": "Track package.json version changes on GitHub",
   "dependencies": {
     "axios": "^1.7.9"
   },
