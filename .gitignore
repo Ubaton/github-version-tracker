@@ -1,3 +1,7 @@
 #Node Modules & Build Files
 /node_modules/
 /dist/
+
+#Testing Files
+/tests/
+index.test.ts
