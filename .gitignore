@@ -1,0 +1,3 @@
+#Node Modules & Build Files
+/node_modules/
+/dist/
