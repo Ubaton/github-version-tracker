@@ -1,6 +1,6 @@
-# GitHub Package Track
+# GitHub Version Tracker
 
-`github-package-track` is an NPM package that allows you to track changes to the `version` field in a `package.json` file hosted on GitHub. It simplifies fetching the current version of a package and makes it easy to display it in your frontend application.
+`github-version-tracker` is an NPM package that allows you to track changes to the `version` field in a `package.json` file hosted on GitHub. It simplifies fetching the current version of a package and makes it easy to display it in your frontend application.
 
 ---
 
@@ -18,15 +18,13 @@
 To install the package, run:
 
 ```bash
-npm install package-track
-
+npm install github-version-tracker
 ```
 
 or using Yarn:
 
 ```bash
-yarn add package-track
-
+yarn add github-version-tracker
 ```
 
 ---
@@ -35,12 +33,12 @@ yarn add package-track
 
 ### Basic Usage
 
-Here’s an example of how to use `package-track` to fetch and display the version of a GitHub repository's `package.json`:
+Here’s an example of how to use `github-version-tracker` to fetch and display the version of a GitHub repository's `package.json`:
 
 #### Node.js
 
 ```typescript
-import PackageTrack from "package-track";
+import PackageTrack from "github-version-tracker";
 
 const tracker = new PackageTrack();
 const githubUrl = "https://github.com/yourusername/your-repo";
@@ -66,7 +64,7 @@ You can use the `VersionDisplay` React component to show the version in your fro
 
 ```tsx
 import React from "react";
-import VersionDisplay from "package-track/dist/components/VersionDisplay";
+import VersionDisplay from "github-version-tracker/dist/components/VersionDisplay";
 
 const App: React.FC = () => {
   return (
@@ -102,7 +100,6 @@ export default App;
 
 ```typescript
 new PackageTrack(cacheTTL?: number);
-
 ```
 
 - **`cacheTTL`** _(optional)_: Time-to-live for cached results in seconds (default: `3600`).
@@ -125,9 +122,9 @@ new PackageTrack(cacheTTL?: number);
 
 ## Example Workflow
 
-1.  Install the package.
-2.  Use the `PackageTrack` class to fetch and cache package versions.
-3.  Integrate with React to dynamically display the version on your website.
+1. Install the package.
+2. Use the `PackageTrack` class to fetch and cache package versions.
+3. Integrate with React to dynamically display the version on your website.
 
 ---
 
@@ -141,11 +138,11 @@ This project is licensed under the MIT License. See the [MIT License](https://mi
 
 Contributions are welcome! Please fork the repository and submit a pull request with your changes.
 
-1.  Fork the repository.
-2.  Create your feature branch: `git checkout -b my-new-feature`
-3.  Commit your changes: `git commit -m 'Add some feature'`
-4.  Push to the branch: `git push origin my-new-feature`
-5.  Submit a pull request.
+1. Fork the repository.
+2. Create your feature branch: `git checkout -b my-new-feature`
+3. Commit your changes: `git commit -m 'Add some feature'`
+4. Push to the branch: `git push origin my-new-feature`
+5. Submit a pull request.
 
 ---
 
