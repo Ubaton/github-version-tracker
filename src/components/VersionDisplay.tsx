@@ -1,43 +1,64 @@
 import React, { useEffect, useState } from "react";
-import { PackageTrack } from "github-version-tracker";
+import { PackageTrack } from "../index";
 
 interface VersionDisplayProps {
-  githubUrl: string;
-  cacheTTL?: number;
+  // Additional display options
+  className?: string;
+  refreshInterval?: number;
+  repository: string;
+  branch: string;
+  path: string;
 }
 
 const VersionDisplay: React.FC<VersionDisplayProps> = ({
-  githubUrl,
-  cacheTTL = 3600,
+  repository,
+  branch,
+  path,
+  className = "version-display",
+  refreshInterval = 3600000,
 }) => {
   const [version, setVersion] = useState<string>("Loading...");
-  const [lastChecked, setLastChecked] = useState<string>("");
+  const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const tracker = new PackageTrack(cacheTTL);
+    const tracker = new PackageTrack({ repository, branch, path });
 
     const fetchVersion = async () => {
       try {
-        const packageInfo = await tracker.getVersion(githubUrl);
-        setVersion(packageInfo.version);
-        setLastChecked(new Date(packageInfo.lastChecked).toLocaleString());
-      } catch (err: any) {
-        setError(err.message);
+        const packageInfo = await tracker.getVersion();
+        setVersion(packageInfo.currentVersion);
+        setLastChecked(packageInfo.lastUpdated);
+        setError(null);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch version"
+        );
       }
     };
 
+    // Initial fetch
     fetchVersion();
-  }, [githubUrl, cacheTTL]);
+
+    // periodic refresh if interval is provided
+    if (refreshInterval > 0) {
+      const intervalId = setInterval(fetchVersion, refreshInterval);
+      return () => clearInterval(intervalId);
+    }
+  }, [repository, branch, path, refreshInterval]);
 
   if (error) {
-    return <div>Error fetching version: {error}</div>;
+    return <div className={`${className}__error`}>Error: {error}</div>;
   }
 
   return (
-    <div className="version-display">
-      <div>Version: {version}</div>
-      {lastChecked && <div>Last checked: {lastChecked}</div>}
+    <div className={className}>
+      <div className={`${className}__version`}>Version: {version}</div>
+      {lastChecked && (
+        <div className={`${className}__timestamp`}>
+          Last checked: {lastChecked.toLocaleString()}
+        </div>
+      )}
     </div>
   );
 };
