@@ -22,7 +22,8 @@
   "type": "commonjs",
   "description": "Track package.json version changes on GitHub",
   "dependencies": {
-    "axios": "^1.7.9"
+    "axios": "^1.7.9",
+    "github-version-tracker": "^0.0.1"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
