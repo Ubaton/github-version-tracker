@@ -27,6 +27,18 @@ or using Yarn:
 yarn add github-version-tracker
 ```
 
+or using pnpm:
+
+```bash
+pnpm add github-version-tracker
+```
+
+or using Bun:
+
+```bash
+bun add github-version-tracker
+```
+
 ---
 
 ## Usage
