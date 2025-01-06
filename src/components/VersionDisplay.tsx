@@ -9,7 +9,7 @@ interface VersionDisplayProps {
   repository: string;
   branch: string;
   path: string;
-  githubToken?: string; // Optional GitHub token for API authentication
+  githubToken?: string;
 }
 
 const VersionDisplay: React.FC<VersionDisplayProps> = ({
