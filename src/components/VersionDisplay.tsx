@@ -20,27 +20,53 @@ const VersionDisplay: React.FC<VersionDisplayProps> = ({
   const [version, setVersion] = useState<string>("Loading...");
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeBranch, setActiveBranch] = useState<string>(branch);
 
   useEffect(() => {
-    const tracker = new PackageTrack({ repository, branch, path });
-
     const fetchVersion = async () => {
-      try {
+      const tryFetch = async (branchName: string) => {
+        const tracker = new PackageTrack({
+          repository,
+          branch: branchName,
+          path,
+        });
         const packageInfo = await tracker.getVersion();
         setVersion(packageInfo.currentVersion);
         setLastChecked(packageInfo.lastUpdated);
+        setActiveBranch(branchName);
         setError(null);
+      };
+
+      try {
+        // First try with the specified branch
+        await tryFetch(branch);
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to fetch version"
-        );
+        // If master branch fails, try main
+        if (branch === "master") {
+          try {
+            await tryFetch("main");
+          } catch (fallbackErr) {
+            setError(
+              "Failed to fetch version from both 'master' and 'main' branches"
+            );
+          }
+        } else {
+          setError(
+            err instanceof Error ? err.message : "Failed to fetch version"
+          );
+        }
       }
     };
+
+    // Reset states when props change
+    setVersion("Loading...");
+    setError(null);
+    setActiveBranch(branch);
 
     // Initial fetch
     fetchVersion();
 
-    // periodic refresh if interval is provided
+    // Periodic refresh if interval is provided
     if (refreshInterval > 0) {
       const intervalId = setInterval(fetchVersion, refreshInterval);
       return () => clearInterval(intervalId);
@@ -57,6 +83,11 @@ const VersionDisplay: React.FC<VersionDisplayProps> = ({
       {lastChecked && (
         <div className={`${className}__timestamp`}>
           Last checked: {lastChecked.toLocaleString()}
+        </div>
+      )}
+      {activeBranch !== branch && (
+        <div className={`${className}__branch-note`}>
+          Using '{activeBranch}' branch (fallback from '{branch}')
         </div>
       )}
     </div>
