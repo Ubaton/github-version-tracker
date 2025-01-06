@@ -17,6 +17,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # Add this to ensure we can push back to the repository
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -37,6 +39,10 @@ jobs:
         run: |
           git config --global user.name 'GitHub Actions'
           git config --global user.email 'actions@github.com'
+          # Add any changes from the build process
+          git add .
+          # Commit any changes from the build process
+          git commit -m "chore: build artifacts" || true
           npm version patch
           npm publish --access public
           git push --follow-tags
