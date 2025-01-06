@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { PackageTrack } from "../index";
+import axios from "axios";
 
 interface VersionDisplayProps {
   // Additional display options
@@ -8,6 +9,7 @@ interface VersionDisplayProps {
   repository: string;
   branch: string;
   path: string;
+  githubToken?: string; // Optional GitHub token for API authentication
 }
 
 const VersionDisplay: React.FC<VersionDisplayProps> = ({
@@ -16,6 +18,7 @@ const VersionDisplay: React.FC<VersionDisplayProps> = ({
   path,
   className = "version-display",
   refreshInterval = 3600000,
+  githubToken,
 }) => {
   const [version, setVersion] = useState<string>("Loading...");
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
@@ -25,11 +28,19 @@ const VersionDisplay: React.FC<VersionDisplayProps> = ({
   useEffect(() => {
     const fetchVersion = async () => {
       const tryFetch = async (branchName: string) => {
+        // Configure axios for the request
+        if (githubToken) {
+          axios.defaults.headers.common[
+            "Authorization"
+          ] = `token ${githubToken}`;
+        }
+
         const tracker = new PackageTrack({
           repository,
           branch: branchName,
           path,
         });
+
         const packageInfo = await tracker.getVersion();
         setVersion(packageInfo.currentVersion);
         setLastChecked(packageInfo.lastUpdated);
@@ -38,22 +49,26 @@ const VersionDisplay: React.FC<VersionDisplayProps> = ({
       };
 
       try {
-        // First try with the specified branch
         await tryFetch(branch);
       } catch (err) {
-        // If master branch fails, try main
-        if (branch === "master") {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to fetch version";
+
+        // Only try fallback if it's a 404 error and we're on master branch
+        if (errorMessage.includes("not found") && branch === "master") {
           try {
             await tryFetch("main");
           } catch (fallbackErr) {
             setError(
-              "Failed to fetch version from both 'master' and 'main' branches"
+              `Failed to fetch version: ${
+                fallbackErr instanceof Error
+                  ? fallbackErr.message
+                  : "Unknown error"
+              }`
             );
           }
         } else {
-          setError(
-            err instanceof Error ? err.message : "Failed to fetch version"
-          );
+          setError(errorMessage);
         }
       }
     };
@@ -71,7 +86,7 @@ const VersionDisplay: React.FC<VersionDisplayProps> = ({
       const intervalId = setInterval(fetchVersion, refreshInterval);
       return () => clearInterval(intervalId);
     }
-  }, [repository, branch, path, refreshInterval]);
+  }, [repository, branch, path, refreshInterval, githubToken]);
 
   if (error) {
     return <div className={`${className}__error`}>Error: {error}</div>;

@@ -2,20 +2,16 @@
 
 `github-version-tracker` is an NPM package that allows you to track changes to the `version` field in a `package.json` file hosted on GitHub. It simplifies fetching the current version of a package and makes it easy to display it in your frontend application.
 
----
-
 ## Features
 
-- Fetch `package.json` version from public GitHub repositories.
-- Cache fetched data to minimize API calls.
-- Customizable cache duration.
-- React component integration for frontend display.
-
----
+- Fetch `version` from any `package.json` file in GitHub repositories
+- Support for both `main` and `master` branches with automatic fallback
+- React component for easy frontend integration
+- GitHub API token support for higher rate limits
+- Customizable refresh intervals
+- Automatic error handling and recovery
 
 ## Installation
-
-To install the package, run:
 
 ```bash
 npm install github-version-tracker
@@ -27,142 +23,145 @@ or using Yarn:
 yarn add github-version-tracker
 ```
 
-or using pnpm:
-
-```bash
-pnpm add github-version-tracker
-```
-
-or using Bun:
-
-```bash
-bun add github-version-tracker
-```
-
----
-
 ## Usage
 
-### Basic Usage
-
-Here’s an example of how to use `github-version-tracker` to fetch and display the version of a GitHub repository's `package.json`:
-
-#### Node.js
+### Basic Usage with PackageTrack
 
 ```typescript
 import PackageTrack from "github-version-tracker";
 
-const tracker = new PackageTrack();
-const githubUrl = "https://github.com/yourusername/your-repo";
+const tracker = new PackageTrack({
+  repository: "username/repo",
+  branch: "main", // optional, defaults to 'main'
+  path: "package.json", // optional, defaults to 'package.json'
+});
 
-async function displayVersion() {
+async function checkVersion() {
   try {
-    const packageInfo = await tracker.getVersion(githubUrl);
-    console.log(`Version: ${packageInfo.version}`);
-    console.log(`Last Checked: ${packageInfo.lastChecked}`);
+    const packageInfo = await tracker.getVersion();
+    console.log(`Current Version: ${packageInfo.currentVersion}`);
+    console.log(`Last Updated: ${packageInfo.lastUpdated}`);
+    console.log(`Repository: ${packageInfo.repository}`);
   } catch (error) {
-    console.error("Error fetching version:", error.message);
+    console.error("Error:", error.message);
   }
 }
-
-displayVersion();
 ```
 
-### React Integration
-
-You can use the `VersionDisplay` React component to show the version in your frontend:
-
-#### Example Component
+### React Component Usage
 
 ```tsx
-import React from "react";
-import VersionDisplay from "github-version-tracker/dist/components/VersionDisplay";
+import { VersionDisplay } from "github-version-tracker";
 
-const App: React.FC = () => {
+// Basic usage
+function App() {
   return (
-    <div>
-      <h1>Package Version</h1>
-      <VersionDisplay githubUrl="https://github.com/yourusername/your-repo" />
-    </div>
+    <VersionDisplay
+      repository="username/repo"
+      branch="main"
+      path="package.json"
+    />
   );
-};
+}
 
-export default App;
+// Advanced usage with all options
+function App() {
+  return (
+    <VersionDisplay
+      repository="username/repo"
+      branch="main"
+      path="package.json"
+      className="custom-class"
+      refreshInterval={3600000} // 1 hour in milliseconds
+      githubToken="your-github-token" // Optional: For higher rate limits
+    />
+  );
+}
 ```
-
-#### Output in Frontend
-
-```html
-<div>
-  <h1>Package Version</h1>
-  <div class="version-display">
-    <div>Version: 1.0.0</div>
-    <div>Last checked: 01/02/2025, 3:00 PM</div>
-  </div>
-</div>
-```
-
----
 
 ## API Reference
 
 ### PackageTrack Class
 
-#### Constructor
+#### Options
 
 ```typescript
-new PackageTrack(cacheTTL?: number);
+interface PackageTrackOptions {
+  repository: string; // Required: 'username/repo'
+  branch?: string; // Optional: defaults to 'main'
+  path?: string; // Optional: defaults to 'package.json'
+}
 ```
-
-- **`cacheTTL`** _(optional)_: Time-to-live for cached results in seconds (default: `3600`).
 
 #### Methods
 
-- **`getVersion(githubUrl: string): Promise<PackageInfo>`**
+- **`getVersion(): Promise<PackageInfo>`**
 
-  - Fetch the current version from the specified GitHub repository.
+  - Returns current version information
+  - Returns: `{ currentVersion: string, lastUpdated: Date, repository: string }`
 
-- **`clearCache(githubUrl?: string): void`**
+- **`checkForUpdates(currentVersion: string): Promise<{ hasUpdate: boolean, latestVersion: string }>`**
+  - Checks if updates are available
+  - Parameters: `currentVersion` - version to compare against
 
-  - Clear cache for a specific URL or flush all cache.
+### VersionDisplay Component
 
-- **`setCacheTTL(seconds: number): void`**
+#### Props
 
-  - Set the cache duration.
+```typescript
+interface VersionDisplayProps {
+  repository: string; // Required: 'username/repo'
+  branch: string; // Required: e.g., 'main' or 'master'
+  path: string; // Required: path to package.json
+  className?: string; // Optional: CSS class name
+  refreshInterval?: number; // Optional: refresh interval in ms
+  githubToken?: string; // Optional: GitHub API token
+}
+```
 
----
+## Error Handling
 
-## Example Workflow
+The package includes comprehensive error handling for common scenarios:
 
-1. Install the package.
-2. Use the `PackageTrack` class to fetch and cache package versions.
-3. Integrate with React to dynamically display the version on your website.
+- Repository not found
+- File not found
+- Invalid package.json format
+- GitHub API rate limiting
+- Network errors
+- Branch fallback (master → main)
 
----
+## Best Practices
+
+1. **GitHub Token**: For production use, it's recommended to provide a GitHub token to avoid rate limiting:
+
+   ```tsx
+   <VersionDisplay
+     repository="username/repo"
+     githubToken={process.env.GITHUB_TOKEN}
+   />
+   ```
+
+2. **Refresh Interval**: Choose an appropriate refresh interval to balance freshness with API usage:
+   ```tsx
+   <VersionDisplay
+     repository="username/repo"
+     refreshInterval={3600000} // 1 hour
+   />
+   ```
 
 ## License
 
-This project is licensed under the MIT License. See the [MIT License](https://mit-license.org/) file for details.
-
----
+MIT License
 
 ## Contributing
 
-Contributions are welcome! Please fork the repository and submit a pull request with your changes.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-1. Fork the repository.
-2. Create your feature branch: `git checkout -b my-new-feature`
-3. Commit your changes: `git commit -m 'Add some feature'`
-4. Push to the branch: `git push origin my-new-feature`
-5. Submit a pull request.
-
----
-
-## Acknowledgments
-
-Special thanks to the open-source community for inspiring this package!
-
----
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## Contact
 
