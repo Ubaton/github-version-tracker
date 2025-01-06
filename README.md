@@ -32,8 +32,8 @@ import PackageTrack from "github-version-tracker";
 
 const tracker = new PackageTrack({
   repository: "username/repo",
-  branch: "main", // optional, defaults to 'main'
-  path: "package.json", // optional, defaults to 'package.json'
+  branch: "main",
+  path: "package.json",
 });
 
 async function checkVersion() {
@@ -64,7 +64,6 @@ function App() {
   );
 }
 
-// Advanced usage with all options
 function App() {
   return (
     <VersionDisplay
@@ -72,8 +71,8 @@ function App() {
       branch="main"
       path="package.json"
       className="custom-class"
-      refreshInterval={3600000} // 1 hour in milliseconds
-      githubToken="your-github-token" // Optional: For higher rate limits
+      refreshInterval={3600000}
+      githubToken="your-github-token"
     />
   );
 }
@@ -87,9 +86,9 @@ function App() {
 
 ```typescript
 interface PackageTrackOptions {
-  repository: string; // Required: 'username/repo'
-  branch?: string; // Optional: defaults to 'main'
-  path?: string; // Optional: defaults to 'package.json'
+  repository: string;
+  branch?: string;
+  path?: string;
 }
 ```
 
@@ -110,12 +109,12 @@ interface PackageTrackOptions {
 
 ```typescript
 interface VersionDisplayProps {
-  repository: string; // Required: 'username/repo'
-  branch: string; // Required: e.g., 'main' or 'master'
-  path: string; // Required: path to package.json
-  className?: string; // Optional: CSS class name
-  refreshInterval?: number; // Optional: refresh interval in ms
-  githubToken?: string; // Optional: GitHub API token
+  repository: string;
+  branch: string;
+  path: string;
+  className?: string;
+  refreshInterval?: number;
+  githubToken?: string;
 }
 ```
 
@@ -143,10 +142,7 @@ The package includes comprehensive error handling for common scenarios:
 
 2. **Refresh Interval**: Choose an appropriate refresh interval to balance freshness with API usage:
    ```tsx
-   <VersionDisplay
-     repository="username/repo"
-     refreshInterval={3600000} // 1 hour
-   />
+   <VersionDisplay repository="username/repo" refreshInterval={3600000} />
    ```
 
 ## License
