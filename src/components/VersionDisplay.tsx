@@ -1,109 +1,214 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { PackageTrack } from "../index";
-import axios from "axios";
+import { AlertCircle, Clock, GitBranch, RefreshCw } from "lucide-react";
+import { Alert, AlertDescription } from "../components/ui/alert";
+import { Button } from "../components/ui/button";
+import { Tooltip } from "../components/ui/tooltip";
+
+interface VersionInfo {
+  version: string;
+  lastChecked: Date | null;
+  error: string | null;
+  activeBranch: string;
+  isLoading: boolean;
+  hasUpdate?: boolean;
+  latestVersion?: string;
+  updateType?: "major" | "minor" | "patch";
+}
 
 interface VersionDisplayProps {
-  // Additional display options
-  className?: string;
-  refreshInterval?: number;
   repository: string;
   branch: string;
   path: string;
   githubToken?: string;
+  className?: string;
+  refreshInterval?: number;
+  onVersionChange?: (version: string) => void;
+  showUpdateCheck?: boolean;
+  currentVersion?: string;
+  showRefreshButton?: boolean;
+  showLastChecked?: boolean;
+  showBranchInfo?: boolean;
+  compact?: boolean;
 }
 
-const VersionDisplay: React.FC<VersionDisplayProps> = ({
+const DEFAULT_REFRESH_INTERVAL = 3600000; // 1 hour
+const FALLBACK_BRANCHES = ["master", "main", "develop"];
+
+export const VersionDisplay: React.FC<VersionDisplayProps> = ({
   repository,
   branch,
   path,
-  className = "version-display",
-  refreshInterval = 3600000,
   githubToken,
+  className = "version-display",
+  refreshInterval = DEFAULT_REFRESH_INTERVAL,
+  onVersionChange,
+  showUpdateCheck = false,
+  currentVersion,
+  showRefreshButton = true,
+  showLastChecked = true,
+  showBranchInfo = true,
+  compact = false,
 }) => {
-  const [version, setVersion] = useState<string>("Loading...");
-  const [lastChecked, setLastChecked] = useState<Date | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [activeBranch, setActiveBranch] = useState<string>(branch);
+  const [versionInfo, setVersionInfo] = useState<VersionInfo>({
+    version: "Loading...",
+    lastChecked: null,
+    error: null,
+    activeBranch: branch,
+    isLoading: true,
+  });
 
-  useEffect(() => {
-    const fetchVersion = async () => {
-      const tryFetch = async (branchName: string) => {
-        // Configure axios for the request
-        if (githubToken) {
-          axios.defaults.headers.common[
-            "Authorization"
-          ] = `token ${githubToken}`;
+  const tracker = useMemo(
+    () =>
+      new PackageTrack({
+        repository,
+        branch,
+        path,
+        authToken: githubToken,
+      }),
+    [repository, branch, path, githubToken]
+  );
+
+  const fetchVersion = useCallback(async () => {
+    setVersionInfo((prev) => ({ ...prev, isLoading: true, error: null }));
+
+    const tryFetchWithBranch = async (branchName: string) => {
+      try {
+        const packageInfo = await tracker.getVersion();
+        let updateInfo = undefined;
+
+        if (showUpdateCheck && currentVersion) {
+          updateInfo = await tracker.checkForUpdates(currentVersion);
         }
 
-        const tracker = new PackageTrack({
-          repository,
-          branch: branchName,
-          path,
+        setVersionInfo({
+          version: packageInfo.currentVersion,
+          lastChecked: packageInfo.lastUpdated,
+          activeBranch: branchName,
+          error: null,
+          isLoading: false,
+          hasUpdate: updateInfo?.hasUpdate,
+          latestVersion: updateInfo?.latestVersion,
+          updateType: updateInfo?.updateType,
         });
 
-        const packageInfo = await tracker.getVersion();
-        setVersion(packageInfo.currentVersion);
-        setLastChecked(packageInfo.lastUpdated);
-        setActiveBranch(branchName);
-        setError(null);
-      };
-
-      try {
-        await tryFetch(branch);
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to fetch version";
-
-        // Only try fallback if it's a 404 error and we're on master branch
-        if (errorMessage.includes("not found") && branch === "master") {
-          try {
-            await tryFetch("main");
-          } catch (fallbackErr) {
-            setError(
-              `Failed to fetch version: ${
-                fallbackErr instanceof Error
-                  ? fallbackErr.message
-                  : "Unknown error"
-              }`
-            );
-          }
-        } else {
-          setError(errorMessage);
-        }
+        onVersionChange?.(packageInfo.currentVersion);
+        return true;
+      } catch (error) {
+        return false;
       }
     };
 
-    // Reset states when props change
-    setVersion("Loading...");
-    setError(null);
-    setActiveBranch(branch);
+    try {
+      // Try the specified branch first
+      if (await tryFetchWithBranch(branch)) return;
 
-    // Initial fetch
+      // Try fallback branches if the main one fails
+      for (const fallbackBranch of FALLBACK_BRANCHES) {
+        if (
+          fallbackBranch !== branch &&
+          (await tryFetchWithBranch(fallbackBranch))
+        )
+          return;
+      }
+
+      // If all attempts fail, set error
+      throw new Error(`Unable to fetch version from any branch`);
+    } catch (err) {
+      setVersionInfo((prev) => ({
+        ...prev,
+        error: err instanceof Error ? err.message : "Unknown error occurred",
+        isLoading: false,
+      }));
+    }
+  }, [tracker, branch, showUpdateCheck, currentVersion, onVersionChange]);
+
+  useEffect(() => {
     fetchVersion();
 
-    // Periodic refresh if interval is provided
     if (refreshInterval > 0) {
       const intervalId = setInterval(fetchVersion, refreshInterval);
       return () => clearInterval(intervalId);
     }
-  }, [repository, branch, path, refreshInterval, githubToken]);
+  }, [fetchVersion, refreshInterval]);
 
-  if (error) {
-    return <div className={`${className}__error`}>Error: {error}</div>;
+  const renderUpdateStatus = () => {
+    if (!showUpdateCheck || !versionInfo.hasUpdate) return null;
+
+    const updateTypeColors = {
+      major: "text-red-500",
+      minor: "text-yellow-500",
+      patch: "text-green-500",
+    };
+
+    return (
+      <div className={`${className}__update mt-2`}>
+        <span className={updateTypeColors[versionInfo.updateType || "patch"]}>
+          {`Update available: ${versionInfo.latestVersion} `}
+          {versionInfo.updateType && `(${versionInfo.updateType} update)`}
+        </span>
+      </div>
+    );
+  };
+
+  if (versionInfo.error) {
+    return (
+      <Alert variant="destructive" className="mt-2">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>{versionInfo.error}</AlertDescription>
+      </Alert>
+    );
   }
 
   return (
-    <div className={className}>
-      <div className={`${className}__version`}>Version: {version}</div>
-      {lastChecked && (
-        <div className={`${className}__timestamp`}>
-          Last checked: {lastChecked.toLocaleString()}
+    <div className={`${className} ${compact ? "text-sm" : ""}`}>
+      <div className="flex items-center gap-2">
+        <div className={`${className}__version flex-grow`}>
+          Version: {versionInfo.isLoading ? "Loading..." : versionInfo.version}
         </div>
-      )}
-      {activeBranch !== branch && (
-        <div className={`${className}__branch-note`}>
-          Using '{activeBranch}' branch (fallback from '{branch}')
-        </div>
+        {showRefreshButton && (
+          <Tooltip
+          //  content="Refresh version"
+          >
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={fetchVersion}
+              disabled={versionInfo.isLoading}
+              className="p-1"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${
+                  versionInfo.isLoading ? "animate-spin" : ""
+                }`}
+              />
+            </Button>
+          </Tooltip>
+        )}
+      </div>
+
+      {renderUpdateStatus()}
+
+      {!compact && (
+        <>
+          {showLastChecked && versionInfo.lastChecked && (
+            <div
+              className={`${className}__timestamp mt-1 text-sm text-gray-500 flex items-center gap-1`}
+            >
+              <Clock className="h-3 w-3" />
+              {versionInfo.lastChecked.toLocaleString()}
+            </div>
+          )}
+
+          {showBranchInfo && versionInfo.activeBranch !== branch && (
+            <div
+              className={`${className}__branch-note mt-1 text-sm text-gray-500 flex items-center gap-1`}
+            >
+              <GitBranch className="h-3 w-3" />
+              Using '{versionInfo.activeBranch}' (fallback from '{branch}')
+            </div>
+          )}
+        </>
       )}
     </div>
   );
