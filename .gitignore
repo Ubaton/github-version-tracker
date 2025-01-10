@@ -9,4 +9,5 @@ index.test.ts
 #Config Files
 /lib/
 utils.ts
+components.json
 
