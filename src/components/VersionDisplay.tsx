@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { PackageTrack } from "../index";
 import { AlertCircle, Clock, GitBranch, RefreshCw } from "lucide-react";
-import { Alert, AlertDescription } from "../components/ui/alert";
-import { Button } from "../components/ui/button";
-import { Tooltip } from "../components/ui/tooltip";
+import { Alert, AlertDescription } from "./ui/alert";
+import { Button } from "./ui/button";
+import { Tooltip } from "./ui/tooltip";
 import { VersionInfo, VersionDisplayProps } from "../../types/version";
 
 const DEFAULT_REFRESH_INTERVAL = 3600000; // 1 hour in milliseconds
