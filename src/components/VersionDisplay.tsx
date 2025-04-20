@@ -4,35 +4,9 @@ import { AlertCircle, Clock, GitBranch, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Button } from "../components/ui/button";
 import { Tooltip } from "../components/ui/tooltip";
+import { VersionInfo, VersionDisplayProps } from "../../types/version";
 
-interface VersionInfo {
-  version: string;
-  lastChecked: Date | null;
-  error: string | null;
-  activeBranch: string;
-  isLoading: boolean;
-  hasUpdate?: boolean;
-  latestVersion?: string;
-  updateType?: "major" | "minor" | "patch";
-}
-
-interface VersionDisplayProps {
-  repository: string;
-  branch: string;
-  path: string;
-  githubToken?: string;
-  className?: string;
-  refreshInterval?: number;
-  onVersionChange?: (version: string) => void;
-  showUpdateCheck?: boolean;
-  currentVersion?: string;
-  showRefreshButton?: boolean;
-  showLastChecked?: boolean;
-  showBranchInfo?: boolean;
-  compact?: boolean;
-}
-
-const DEFAULT_REFRESH_INTERVAL = 3600000; // 1 hour
+const DEFAULT_REFRESH_INTERVAL = 3600000; // 1 hour in milliseconds
 const FALLBACK_BRANCHES = ["master", "main", "develop"];
 
 export const VersionDisplay: React.FC<VersionDisplayProps> = ({
@@ -62,7 +36,7 @@ export const VersionDisplay: React.FC<VersionDisplayProps> = ({
     () =>
       new PackageTrack({
         repository,
-        branch,
+        branch: branch || "main",
         path,
         authToken: githubToken,
       }),
@@ -101,12 +75,12 @@ export const VersionDisplay: React.FC<VersionDisplayProps> = ({
 
     try {
       // Try the specified branch first
-      if (await tryFetchWithBranch(branch)) return;
+      if (await tryFetchWithBranch(branch || "main")) return;
 
       // Try fallback branches if the main one fails
       for (const fallbackBranch of FALLBACK_BRANCHES) {
         if (
-          fallbackBranch !== branch &&
+          fallbackBranch !== (branch || "main") &&
           (await tryFetchWithBranch(fallbackBranch))
         )
           return;
@@ -167,9 +141,7 @@ export const VersionDisplay: React.FC<VersionDisplayProps> = ({
           Version: {versionInfo.isLoading ? "Loading..." : versionInfo.version}
         </div>
         {showRefreshButton && (
-          <Tooltip
-          //  content="Refresh version"
-          >
+          <Tooltip content="Refresh version">
             <Button
               variant="ghost"
               size="sm"

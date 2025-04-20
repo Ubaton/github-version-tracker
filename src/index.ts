@@ -29,7 +29,7 @@ interface UpdateCheckResult {
   hasUpdate: boolean;
   latestVersion: string;
   currentVersion: string;
-  updateType?: 'major' | 'minor' | 'patch';
+  updateType?: "major" | "minor" | "patch";
 }
 
 export class PackageTrack {
@@ -38,7 +38,8 @@ export class PackageTrack {
   private readonly path: string;
   private readonly authToken?: string;
   private readonly timeout: number;
-  private cache: Map<string, { data: PackageInfo; timestamp: number }> = new Map();
+  private cache: Map<string, { data: PackageInfo; timestamp: number }> =
+    new Map();
   private readonly cacheDuration = 5 * 60 * 1000; // 5 minutes cache
 
   constructor(options: PackageTrackOptions) {
@@ -54,7 +55,10 @@ export class PackageTrack {
     if (!options.repository) {
       throw new Error("Repository is required");
     }
-    if (options.timeout && (typeof options.timeout !== 'number' || options.timeout <= 0)) {
+    if (
+      options.timeout &&
+      (typeof options.timeout !== "number" || options.timeout <= 0)
+    ) {
       throw new Error("Timeout must be a positive number");
     }
   }
@@ -80,11 +84,11 @@ export class PackageTrack {
   private getFromCache(): PackageInfo | null {
     const cacheKey = this.getCacheKey();
     const cached = this.cache.get(cacheKey);
-    
+
     if (cached && Date.now() - cached.timestamp < this.cacheDuration) {
       return cached.data;
     }
-    
+
     return null;
   }
 
@@ -99,30 +103,47 @@ export class PackageTrack {
   async getVersion(skipCache = false): Promise<PackageInfo> {
     if (!skipCache) {
       const cached = this.getFromCache();
-      if (cached) return cached;
+      if (cached) {
+        try {
+          // Validate cached version format
+          if (!semver.valid(cached.currentVersion)) {
+            this.cache.delete(this.getCacheKey());
+          } else {
+            return cached;
+          }
+        } catch {
+          this.cache.delete(this.getCacheKey());
+        }
+      }
     }
 
     try {
       const response = await axios.get(this.buildGitHubUrl(), {
         headers: {
           Accept: "application/vnd.github.v3.raw",
-          ...(this.authToken && { Authorization: `token ${this.authToken}` }),
+          ...(this.authToken && { Authorization: `Bearer ${this.authToken}` }),
           "User-Agent": "PackageTrack",
         },
         timeout: this.timeout,
+        validateStatus: (status) => status === 200,
       });
 
       let packageData: PackageJSON;
       try {
         if (response.data.content) {
-          const content = Buffer.from(response.data.content, "base64").toString();
+          const content = Buffer.from(
+            response.data.content,
+            "base64"
+          ).toString();
           packageData = JSON.parse(content);
         } else {
           packageData = response.data;
         }
       } catch (parseError) {
         throw new Error(
-          `Invalid package.json format in ${this.repository}/${this.path}: ${(parseError as Error).message}`
+          `Invalid package.json format in ${this.repository}/${this.path}: ${
+            (parseError as Error).message
+          }`
         );
       }
 
@@ -151,23 +172,29 @@ export class PackageTrack {
       return packageInfo;
     } catch (error: any) {
       if (axios.isAxiosError(error)) {
-        if (error.code === 'ECONNABORTED') {
+        if (error.code === "ECONNABORTED") {
           throw new Error(`Request timeout after ${this.timeout}ms`);
         }
-        if (error.response?.status === 404) {
+        const status = error.response?.status;
+        if (status === 404) {
           throw new Error(
             `Repository or file not found: ${this.repository} at ref "${this.branch}" and path "${this.path}"`
           );
         }
-        if (error.response?.status === 403) {
+        if (status === 403) {
           throw new Error(
-            "GitHub API rate limit exceeded. Consider providing a personal access token in the options."
+            this.authToken
+              ? "Invalid GitHub token or insufficient permissions"
+              : "GitHub API rate limit exceeded. Consider providing a personal access token in the options."
           );
         }
+        if (status === 401) {
+          throw new Error("Unauthorized: Invalid GitHub token");
+        }
         throw new Error(
-          `GitHub API error fetching ${this.repository}/${this.path}: ${
-            error.response?.status
-          } ${error.response?.data?.message || error.message}`
+          `GitHub API error (${status}): ${
+            error.response?.data?.message || error.message
+          }`
         );
       }
       throw error;
@@ -179,26 +206,35 @@ export class PackageTrack {
       throw new Error(`Invalid current version format: ${currentVersion}`);
     }
 
-    const { currentVersion: latestVersion } = await this.getVersion();
-    const hasUpdate = semver.gt(latestVersion, currentVersion);
-    
-    let updateType: 'major' | 'minor' | 'patch' | undefined;
-    if (hasUpdate) {
-      if (semver.major(latestVersion) > semver.major(currentVersion)) {
-        updateType = 'major';
-      } else if (semver.minor(latestVersion) > semver.minor(currentVersion)) {
-        updateType = 'minor';
-      } else if (semver.patch(latestVersion) > semver.patch(currentVersion)) {
-        updateType = 'patch';
-      }
-    }
+    try {
+      const { currentVersion: latestVersion } = await this.getVersion(true);
+      const hasUpdate = semver.gt(latestVersion, currentVersion);
 
-    return {
-      hasUpdate,
-      latestVersion,
-      currentVersion,
-      updateType,
-    };
+      let updateType: "major" | "minor" | "patch" | undefined;
+      if (hasUpdate) {
+        if (semver.major(latestVersion) > semver.major(currentVersion)) {
+          updateType = "major";
+        } else if (semver.minor(latestVersion) > semver.minor(currentVersion)) {
+          updateType = "minor";
+        } else if (semver.patch(latestVersion) > semver.patch(currentVersion)) {
+          updateType = "patch";
+        }
+      }
+
+      return {
+        hasUpdate,
+        latestVersion,
+        currentVersion,
+        updateType,
+      };
+    } catch (error) {
+      // If version check fails, wrap the error with more context
+      throw new Error(
+        `Failed to check for updates: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
   }
 
   clearCache(): void {
