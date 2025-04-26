@@ -1,37 +1,11 @@
 import axios from "axios";
 import semver from "semver";
-
-interface PackageTrackOptions {
-  repository: string;
-  branch?: string;
-  path?: string;
-  authToken?: string;
-  timeout?: number;
-}
-
-interface PackageJSON {
-  version?: string;
-  name?: string;
-  dependencies?: Record<string, string>;
-  devDependencies?: Record<string, string>;
-}
-
-interface PackageInfo {
-  currentVersion: string;
-  lastUpdated: Date;
-  repository: string;
-  name?: string;
-  dependencies?: Record<string, string>;
-  devDependencies?: Record<string, string>;
-}
-
-interface UpdateCheckResult {
-  hasUpdate: boolean;
-  latestVersion: string;
-  currentVersion: string;
-  updateType?: "major" | "minor" | "patch";
-}
-
+import {
+  PackageInfo,
+  PackageJSON,
+  PackageTrackOptions,
+  UpdateCheckResult,
+} from "../types/version";
 export class PackageTrack {
   private readonly repository: string;
   private readonly branch: string;

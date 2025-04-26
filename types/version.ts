@@ -26,3 +26,34 @@ export interface VersionDisplayProps {
 }
 
 export type UpdateType = "major" | "minor" | "patch";
+
+export interface PackageTrackOptions {
+  repository: string;
+  branch?: string;
+  path?: string;
+  authToken?: string;
+  timeout?: number;
+}
+
+export interface PackageJSON {
+  version?: string;
+  name?: string;
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+}
+
+export interface PackageInfo {
+  currentVersion: string;
+  lastUpdated: Date;
+  repository: string;
+  name?: string;
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+}
+
+export interface UpdateCheckResult {
+  hasUpdate: boolean;
+  latestVersion: string;
+  currentVersion: string;
+  updateType?: "major" | "minor" | "patch";
+}
